@@ -1,7 +1,7 @@
 # Tiny Tapeout project information
 project:
   title:        "Carry-Chain Logic Lock"
-  author:       "Jonathan Gerard"
+  author:       "Jonathan Gerard and Tanmay Deshmukh"
   discord:      "" 
   description:  "A timing-based hardware security primitive using XOR carry-poisoning."
   language:     "Verilog" 
@@ -10,7 +10,7 @@ project:
   tiles: "1x1" 
 
   # Match the university's naming style
-  top_module:  "tt_um_jonathan_logic_lock"
+  top_module:  "tt_um_jonathan_tanmay_logic_lock"
 
   source_files:
     - "project.v"
