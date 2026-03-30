@@ -5,7 +5,7 @@ module tt_um_jonathan_logic_lock (
     output wire [7:0] uo_out,   // [0]: unlocked_led, [1]: blinker
     input  wire [7:0] uio_in,   
     output wire [7:0] uio_out,  
-    input  wire [7:0] uio_oe,   
+    output wire [7:0] uio_oe,   
     input  wire       ena,      
     input  wire       clk,      
     input  wire       rst_n     
@@ -16,7 +16,7 @@ module tt_um_jonathan_logic_lock (
     wire key_shift;
     assign key_data  = ui_in[0];
     assign key_shift = ui_in[1];
-
+    assign uio_oe = 8'b0;
     assign uio_out = 8'b0;
 
     // --- SYNCHRONOUS KEY LOADING ---
