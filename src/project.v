@@ -1,6 +1,6 @@
 `default_nettype none
 
-module tt_um_jonathan_logic_lock (
+module tt_um_jonathan_tanmay_logic_lock (
     input  wire [7:0] ui_in,    // [0]: key_data, [1]: key_shift
     output wire [7:0] uo_out,   // [0]: unlocked_led, [1]: blinker
     input  wire [7:0] uio_in,   

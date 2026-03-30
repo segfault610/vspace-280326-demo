@@ -31,7 +31,6 @@ async def test_logic_lock_full_flow(dut):
     dut.rst_n.value = 1
     await ClockCycles(dut.clk, 5)
 
-    # FIX: Wrap in int() to convert LogicArray to integer
     assert (int(dut.uo_out.value) & 0x01) == 0, "Error: System not locked after reset!"
     dut._log.info("System successfully locked on boot.")
 
@@ -79,4 +78,5 @@ async def test_logic_lock_full_flow(dut):
     
     dut._log.info(f"Functional check complete. Logic is operational.")
     dut._log.info("All Cocotb security vectors passed.")
+
 
