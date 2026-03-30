@@ -10,11 +10,11 @@ The design is broken down into three main hardware modules:
 + **The Identity Comparator:** A 16-bit combinational equality block that continuously compares the current shift register value against a hardcoded Master Key (`16'hA5C3`). 
 
 + **The Obfuscated Counter Stage:** A 24-bit counter split into an 8-bit time-base and a 16-bit functional stage. An XOR gate intercepts the carry signal between these stages.
-    - **Locked (Default/Incorrect Key):** The carry is inverted, forcing the functional stage to increment at an accelerated rate, resulting in a high-speed "scrambled" output.
+    - **Locked (Default/Incorrect Key):** The carry is inverted, forcing the functional stage to increment at an accelerated rate, resulting in a high-speed scrambled output.
     - **Unlocked:** The XOR gate becomes transparent, and the 16-bit stage increments normally to produce a stable 1 Hz pulse.
 
 ### Transient Behavior & Security
-The output behavior is dynamic but remains corrupted until the authorization is complete. As bits are shifted in, the internal state changes, but the `blinker_output` will continue to flicker at high frequency as long as the register does not match the master key. This prevents side-channel analysis of "partial key matches."
+The output behavior is dynamic but remains corrupted until the authorization is complete. As bits are shifted in, the internal state changes, but the `blinker_output` will continue to flicker at high frequency as long as the register does not match the master key. This prevents side-channel analysis of partial key matches.
 
 ## How to test
 + **Reset:** Press the system reset button (`rst_n` LOW). The `unlocked_led` (uo[0]) should be OFF, and `uo[1]` should show a high-frequency flicker.
@@ -24,6 +24,6 @@ The output behavior is dynamic but remains corrupted until the authorization is 
 
 ## External hardware
 + **Tiny Tapeout Demo Board.**
-+ **Logic Analyzer/Oscilloscope:** Recommended to observe the frequency shift on `uo_out[1]`.
++ **Logic Analyzer/Oscilloscope:** To observe the frequency shift on `uo_out[1]`. We can also observe an LED blink for quick testing
 + **Microcontroller:** To automate the 16-bit serial key entry via `ui_in[0]` and `ui_in[1]`.
 
