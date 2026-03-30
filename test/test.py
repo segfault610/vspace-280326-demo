@@ -15,15 +15,49 @@ class LogicLockModel:
     def is_unlocked(self):
         return self.unlocked
 
+async def get_toggle_count(dut, cycles):
+    """
+    Helper to measure output activity over a fixed golden window.
+    """
+    count = 0
+    last_val = (int(dut.uo_out.value) >> 1) & 1
+    for _ in range(cycles):
+        await ClockCycles(dut.clk, 1)
+        current_val = (int(dut.uo_out.value) >> 1) & 1
+        if current_val != last_val:
+            count += 1
+            last_val = current_val
+    return count
+
+async def shift_key(dut, model, key_value):
+    """
+    Helper to shift a 16-bit key into the hardware.
+    """
+    for i in range(15, -1, -1):
+        bit = (key_value >> i) & 1
+        # Set data bit on ui[0]
+        current_ui = int(dut.ui_in.value)
+        dut.ui_in.value = (current_ui & ~0x01) | bit 
+        await ClockCycles(dut.clk, 1)
+        
+        # Pulse shift clock on ui[1]
+        dut.ui_in.value = int(dut.ui_in.value) | 0x02
+        await ClockCycles(dut.clk, 2)
+        dut.ui_in.value = int(dut.ui_in.value) & ~0x02
+        await ClockCycles(dut.clk, 1)
+        
+        if model:
+            model.shift_in(bit)
+
 @cocotb.test()
-async def test_logic_lock_full_flow(dut):
-    dut._log.info("Starting SAT-Attack Resistant Logic Lock Test")
+async def test_logic_lock_with_golden_vectors(dut):
+    dut._log.info("Starting SAT-Attack Resistant Logic Lock Golden Vector Test")
     
     model = LogicLockModel(master_key=0xA5C3)
-    clock = Clock(dut.clk, 100, unit="ns") 
+    clock = Clock(dut.clk, 100, unit="ns") # 10MHz
     cocotb.start_soon(clock.start())
 
-    # Phase 1: Reset
+    # --- Phase 1: Reset & Initial Golden Vector ---
     dut.ena.value = 1
     dut.ui_in.value = 0
     dut.rst_n.value = 0
@@ -31,52 +65,43 @@ async def test_logic_lock_full_flow(dut):
     dut.rst_n.value = 1
     await ClockCycles(dut.clk, 5)
 
-    assert (int(dut.uo_out.value) & 0x01) == 0, "Error: System not locked after reset!"
-    dut._log.info("System successfully locked on boot.")
+    dut._log.info("Verifying Golden Vector: Default Locked State")
+    toggles = await get_toggle_count(dut, 1000)
+    assert (int(dut.uo_out.value) & 0x01) == 0, "Error: uo[0] should be LOW"
+    assert toggles > 400, f"Golden Vector Fail: Locked output not toggling fast enough. Got {toggles}"
+    dut._log.info(f"Locked output verified: {toggles} toggles/1000 cycles.")
 
-    async def shift_key(key_value):
-        for i in range(15, -1, -1):
-            bit = (key_value >> i) & 1
-            # Using bitwise OR/AND to set specific bits of ui_in safely
-            current_ui = int(dut.ui_in.value)
-            dut.ui_in.value = (current_ui & ~0x01) | bit # Set bit 0
-            await ClockCycles(dut.clk, 1)
-            
-            dut.ui_in.value = int(dut.ui_in.value) | 0x02 # Set bit 1 (Shift HIGH)
-            await ClockCycles(dut.clk, 2)
-            
-            dut.ui_in.value = int(dut.ui_in.value) & ~0x02 # Set bit 1 (Shift LOW)
-            await ClockCycles(dut.clk, 1)
-            model.shift_in(bit)
-
-    # Phase 2: Wrong Key
-    dut._log.info("Attempting unauthorized entry with wrong key 0x1234")
-    await shift_key(0x1234)
-    await ClockCycles(dut.clk, 5)
+    # --- Phase 2: Unauthorized Entry (Wrong Key) ---
+    dut._log.info("Attempting unauthorized entry with key 0x1234")
+    await shift_key(dut, None, 0x1234)
+    await ClockCycles(dut.clk, 10)
+    
+    toggles = await get_toggle_count(dut, 1000)
     assert (int(dut.uo_out.value) & 0x01) == 0, "Security Failure: Wrong key accepted!"
+    assert toggles > 400, "Security Failure: Output stabilized with wrong key!"
+    dut._log.info("Wrong key rejected correctly.")
 
-    # Phase 3: Correct Key
-    dut._log.info("Applying correct authorization key: 0xA5C3")
-    await shift_key(0xA5C3)
+    # --- Phase 3: Authorized Entry (Correct Key) ---
+    dut._log.info("Applying Golden Key: 0xA5C3")
+    await shift_key(dut, model, 0xA5C3)
+    await ClockCycles(dut.clk, 10)
+    
+    # Check Unlock Signal
+    actual_unlock = (int(dut.uo_out.value) & 0x01)
+    assert actual_unlock == 1, "Unlock failed: uo[0] stayed LOW for correct key"
+    
+    # Verify Unlocked Golden Vector (Stable 1Hz)
+    dut._log.info("Verifying Golden Vector: Unlocked Functional State")
+    toggles = await get_toggle_count(dut, 1000)
+    assert toggles == 0, f"Golden Vector Fail: Unlocked output is unstable! Got {toggles} toggles"
+    dut._log.info("Unlocked output verified: 0 toggles/1000 cycles (Stable 1Hz).")
+
+    # --- Phase 4: Immediate Re-Lock ---
+    dut._log.info("Testing Tamper Response (Shifting 1 extra bit)")
+    await shift_key(dut, None, 0x1) # Shift in a single '1' to mess up the register
     await ClockCycles(dut.clk, 5)
     
-    actual_unlock = (int(dut.uo_out.value) & 0x01)
-    expected_unlock = 1 if model.is_unlocked() else 0
-    assert actual_unlock == expected_unlock, f"Unlock failed! Got {actual_unlock}"
-    dut._log.info("System UNLOCKED successfully.")
+    assert (int(dut.uo_out.value) & 0x01) == 0, "Tamper Failure: System stayed unlocked"
+    dut._log.info("System re-locked immediately after key corruption.")
 
-    # Phase 4: Blinker Check
-    dut._log.info("Monitoring functional output...")
-    last_val = (int(dut.uo_out.value) >> 1) & 1
-    toggles = 0
-    for _ in range(1000):
-        await ClockCycles(dut.clk, 1)
-        current_val = (int(dut.uo_out.value) >> 1) & 1
-        if current_val != last_val:
-            toggles += 1
-            last_val = current_val
-    
-    dut._log.info(f"Functional check complete. Logic is operational.")
-    dut._log.info("All Cocotb security vectors passed.")
-
-
+    dut._log.info("All Golden Vector Security Checks Passed.")
