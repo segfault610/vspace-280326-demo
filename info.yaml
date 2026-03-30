@@ -7,15 +7,19 @@ project:
   language:     "Verilog" 
   clock_hz:     10000000 
 
+  # How many cells does this project take up?
   tiles: "1x1" 
 
-  # Match the university's naming style
+  # Your top module name (must match project.v)
   top_module:  "tt_um_jonathan_tanmay_logic_lock"
 
+  # List your source files here
   source_files:
     - "project.v"
 
+# How the pins are mapped to your inputs and outputs
 pinout:
+  # Inputs
   ui[0]: "key_data"
   ui[1]: "key_shift"
   ui[2]: ""
@@ -25,6 +29,7 @@ pinout:
   ui[6]: ""
   ui[7]: ""
 
+  # Outputs
   uo[0]: "unlocked_led"
   uo[1]: "blinker_output"
   uo[2]: ""
@@ -34,6 +39,7 @@ pinout:
   uo[6]: ""
   uo[7]: ""
 
+  # Bidirectional pins 
   uio[0]: ""
   uio[1]: ""
   uio[2]: ""
@@ -43,5 +49,6 @@ pinout:
   uio[6]: ""
   uio[7]: ""
 
+# Do not change the version
 yaml_version: 6
 
