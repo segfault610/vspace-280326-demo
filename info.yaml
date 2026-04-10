@@ -17,7 +17,7 @@ project:
   source_files:
     - "project.v"
 
-# How the pins are mapped to your inputs and outputs
+# How the pins are mapped to inputs and outputs
 pinout:
   # Inputs
   ui[0]: "key_data"
@@ -40,6 +40,16 @@ pinout:
   uo[7]: ""
 
   # Bidirectional pins 
+  uo[0]: "Segment A"
+  uo[1]: "Segment B"
+  uo[2]: "Segment C"
+  uo[3]: "Segment D"
+  uo[4]: "Segment E"
+  uo[5]: "Segment F"
+  uo[6]: "Segment G"
+  uo[7]: "Tied Low"
+
+  # Bidirectional pins
   uio[0]: ""
   uio[1]: ""
   uio[2]: ""
